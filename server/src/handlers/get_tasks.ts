@@ -3,36 +3,38 @@ import { tasksTable } from '../db/schema';
 import { type GetTasksInput, type Task } from '../schema';
 import { eq, desc } from 'drizzle-orm';
 
-export async function getTasks(input: GetTasksInput): Promise<Task[]> {
+export const getTasks = async (input: GetTasksInput): Promise<Task[]> => {
   try {
-    // Build query based on filter type - handle each case separately
+    // Build complete queries based on filter without reassignment
     let results;
-
+    
     if (input.filter === 'active') {
-      // Show only incomplete tasks
       results = await db.select()
         .from(tasksTable)
         .where(eq(tasksTable.completed, false))
         .orderBy(desc(tasksTable.created_at))
         .execute();
     } else if (input.filter === 'completed') {
-      // Show only completed tasks
       results = await db.select()
         .from(tasksTable)
         .where(eq(tasksTable.completed, true))
         .orderBy(desc(tasksTable.created_at))
         .execute();
     } else {
-      // For 'all' filter, no where clause is needed
+      // For 'all' filter, no where condition
       results = await db.select()
         .from(tasksTable)
         .orderBy(desc(tasksTable.created_at))
         .execute();
     }
 
-    return results;
+    return results.map(task => ({
+      ...task,
+      created_at: task.created_at,
+      updated_at: task.updated_at,
+    }));
   } catch (error) {
-    console.error('Failed to retrieve tasks:', error);
+    console.error('Task retrieval failed:', error);
     throw error;
   }
-}
+};

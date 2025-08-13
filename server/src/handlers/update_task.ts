@@ -5,41 +5,36 @@ import { eq } from 'drizzle-orm';
 
 export const updateTask = async (input: UpdateTaskInput): Promise<Task> => {
   try {
-    // First, check if the task exists
-    const existingTask = await db.select()
-      .from(tasksTable)
-      .where(eq(tasksTable.id, input.id))
-      .execute();
-
-    if (existingTask.length === 0) {
-      throw new Error(`Task with id ${input.id} not found`);
-    }
-
-    // Build the update object with only provided fields
-    const updateData: any = {
-      updated_at: new Date() // Always update the timestamp
+    const updateData: Partial<typeof tasksTable.$inferInsert> = {
+      updated_at: new Date(),
     };
 
     if (input.title !== undefined) {
       updateData.title = input.title;
     }
-
     if (input.description !== undefined) {
       updateData.description = input.description;
     }
-
     if (input.completed !== undefined) {
       updateData.completed = input.completed;
     }
 
-    // Update the task
     const result = await db.update(tasksTable)
       .set(updateData)
       .where(eq(tasksTable.id, input.id))
       .returning()
       .execute();
 
-    return result[0];
+    if (result.length === 0) {
+      throw new Error(`Task with id ${input.id} not found`);
+    }
+
+    const task = result[0];
+    return {
+      ...task,
+      created_at: task.created_at,
+      updated_at: task.updated_at,
+    };
   } catch (error) {
     console.error('Task update failed:', error);
     throw error;
